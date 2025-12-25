@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LayoutDashboard, FileText, ClipboardList, Settings, LogOut, Bell, Search } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import UploadZone from './components/UploadZone.jsx';
 import EmployeeTable from './components/EmployeeTable.jsx';
 import Appraisals from './components/Appraisals.jsx';
@@ -7,10 +8,77 @@ import './index.css'; // Ensure styles are loaded
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [teachingProcessData, setTeachingProcessData] = useState(null);
-  const [studentFeedbackData, setStudentFeedbackData] = useState(null);
+
+  // Initialize state from localStorage
+  const [teachingProcessData, setTeachingProcessData] = useState(() => {
+    try {
+      const saved = localStorage.getItem('teachingProcessData');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      console.error("Failed to load teaching data", e);
+      return null;
+    }
+  });
+  const [teachingProcessFile, setTeachingProcessFile] = useState(() => localStorage.getItem('teachingProcessFileName'));
+
+  const [studentFeedbackData, setStudentFeedbackData] = useState(() => {
+    try {
+      const saved = localStorage.getItem('studentFeedbackData');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      console.error("Failed to load feedback data", e);
+      return null;
+    }
+  });
+  const [studentFeedbackFile, setStudentFeedbackFile] = useState(() => localStorage.getItem('studentFeedbackFileName'));
+
+  // Persist state to localStorage
+  useEffect(() => {
+    try {
+      if (teachingProcessData) localStorage.setItem('teachingProcessData', JSON.stringify(teachingProcessData));
+      else localStorage.removeItem('teachingProcessData');
+
+      if (teachingProcessFile) localStorage.setItem('teachingProcessFileName', teachingProcessFile);
+      else localStorage.removeItem('teachingProcessFileName');
+    } catch (e) {
+      console.error("Failed to save teaching data", e);
+    }
+  }, [teachingProcessData, teachingProcessFile]);
+
+  useEffect(() => {
+    try {
+      if (studentFeedbackData) localStorage.setItem('studentFeedbackData', JSON.stringify(studentFeedbackData));
+      else localStorage.removeItem('studentFeedbackData');
+
+      if (studentFeedbackFile) localStorage.setItem('studentFeedbackFileName', studentFeedbackFile);
+      else localStorage.removeItem('studentFeedbackFileName');
+    } catch (e) {
+      console.error("Failed to save feedback data", e);
+    }
+  }, [studentFeedbackData, studentFeedbackFile]);
+
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+
+  const handleDownload = (data, fileName) => {
+    if (!data || data.length === 0) {
+      alert("No data available to download.");
+      return;
+    }
+
+    try {
+      const ws = XLSX.utils.json_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+
+      // Use the original filename if possible, otherwise generate one
+      const name = fileName || "export.xlsx";
+      XLSX.writeFile(wb, name);
+    } catch (error) {
+      console.error("Error creating Excel file:", error);
+      alert("Failed to download file.");
+    }
+  };
 
   return (
     <div className="dashboard-container">
@@ -174,20 +242,38 @@ function App() {
                 title="Teaching Process"
                 description="Drop Teaching Process Excel file here"
                 accept=".xlsx, .xls, .csv"
-                onFileProcessed={(data) => {
+                uploadedFileName={teachingProcessFile}
+                onFileProcessed={(data, fileName) => {
                   setTeachingProcessData(data);
+                  setTeachingProcessFile(fileName);
                   console.log("Teaching Process Data:", data);
                   alert(`Successfully loaded ${data.length} rows for Teaching Process`);
+                }}
+                onFileRemove={() => {
+                  setTeachingProcessData(null);
+                  setTeachingProcessFile(null);
+                }}
+                onFileView={() => {
+                  handleDownload(teachingProcessData, teachingProcessFile);
                 }}
               />
               <UploadZone
                 title="Student Feedback"
                 description="Drop Student Feedback (CSV/XLSX) here"
                 accept=".xlsx, .xls, .csv"
-                onFileProcessed={(data) => {
+                uploadedFileName={studentFeedbackFile}
+                onFileProcessed={(data, fileName) => {
                   setStudentFeedbackData(data);
+                  setStudentFeedbackFile(fileName);
                   console.log("Student Feedback Data:", data);
                   alert(`Successfully loaded ${data.length} rows for Student Feedback`);
+                }}
+                onFileRemove={() => {
+                  setStudentFeedbackData(null);
+                  setStudentFeedbackFile(null);
+                }}
+                onFileView={() => {
+                  handleDownload(studentFeedbackData, studentFeedbackFile);
                 }}
               />
             </div>
@@ -206,5 +292,6 @@ function App() {
     </div>
   );
 }
+
 
 export default App;

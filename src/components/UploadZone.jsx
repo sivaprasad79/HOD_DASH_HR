@@ -1,8 +1,8 @@
-import React, { useRef, useState } from 'react';
-import { Upload, FileSpreadsheet, CheckCircle2 } from 'lucide-react';
+import React, { useRef, useState, useEffect } from 'react';
+import { Upload, FileSpreadsheet, CheckCircle2, Eye } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
-const UploadZone = ({ title, accept, description, onFileProcessed }) => {
+const UploadZone = ({ title, accept, description, onFileProcessed, uploadedFileName, onFileRemove, onFileView }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState(null);
   const fileInputRef = useRef(null);
@@ -31,7 +31,7 @@ const UploadZone = ({ title, accept, description, onFileProcessed }) => {
 
         // Pass the data back to the parent
         if (onFileProcessed) {
-          onFileProcessed(jsonData);
+          onFileProcessed(jsonData, uploadedFile.name);
         }
       };
       reader.readAsBinaryString(uploadedFile);
@@ -74,20 +74,64 @@ const UploadZone = ({ title, accept, description, onFileProcessed }) => {
       />
 
       <div className="upload-icon-wrapper">
-        {file ? <CheckCircle2 size={32} /> : <FileSpreadsheet size={32} />}
+        {(file || uploadedFileName) ? <CheckCircle2 size={32} /> : <FileSpreadsheet size={32} />}
       </div>
 
       <h3 className="card-title">{title}</h3>
-      <p className="card-desc">
-        {file ? (
-          <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>
-            {file.name}
-          </span>
+      <div className="card-desc">
+        {(file || uploadedFileName) ? (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+            <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>
+              {file ? file.name : uploadedFileName}
+            </span>
+            {onFileView && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onFileView();
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#3B82F6',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+                title="View data"
+              >
+                <Eye size={16} />
+              </button>
+            )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent triggering the file input
+                setFile(null);
+                if (fileInputRef.current) fileInputRef.current.value = '';
+                if (onFileRemove) onFileRemove();
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#EF4444',
+                padding: '4px',
+                display: 'flex',
+                alignItems: 'center'
+              }}
+              title="Remove file"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+              </svg>
+            </button>
+          </div>
         ) : (
           description || "Drag & drop your Excel file here, or click to browse"
         )}
-      </p>
-      {file && <p style={{ fontSize: '0.8rem', color: '#10B981', marginTop: '0.5rem' }}>File Processed Successfully</p>}
+      </div>
+      {(file || uploadedFileName) && <p style={{ fontSize: '0.8rem', color: '#10B981', marginTop: '0.5rem' }}>File Processed Successfully</p>}
     </div>
   );
 };
