@@ -4,6 +4,7 @@ import * as XLSX from 'xlsx';
 import UploadZone from './components/UploadZone.jsx';
 import EmployeeTable from './components/EmployeeTable.jsx';
 import Appraisals from './components/Appraisals.jsx';
+import DataPreviewModal from './components/DataPreviewModal.jsx';
 import './index.css'; // Ensure styles are loaded
 
 function App() {
@@ -57,28 +58,12 @@ function App() {
     }
   }, [studentFeedbackData, studentFeedbackFile]);
 
+  // Preview State
+  const [previewData, setPreviewData] = useState(null);
+  const [previewTitle, setPreviewTitle] = useState("");
+
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-
-  const handleDownload = (data, fileName) => {
-    if (!data || data.length === 0) {
-      alert("No data available to download.");
-      return;
-    }
-
-    try {
-      const ws = XLSX.utils.json_to_sheet(data);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-
-      // Use the original filename if possible, otherwise generate one
-      const name = fileName || "export.xlsx";
-      XLSX.writeFile(wb, name);
-    } catch (error) {
-      console.error("Error creating Excel file:", error);
-      alert("Failed to download file.");
-    }
-  };
 
   return (
     <div className="dashboard-container">
@@ -254,7 +239,12 @@ function App() {
                   setTeachingProcessFile(null);
                 }}
                 onFileView={() => {
-                  handleDownload(teachingProcessData, teachingProcessFile);
+                  if (teachingProcessData) {
+                    setPreviewData(teachingProcessData);
+                    setPreviewTitle("Teaching Process");
+                  } else {
+                    alert("No data to view");
+                  }
                 }}
               />
               <UploadZone
@@ -273,7 +263,12 @@ function App() {
                   setStudentFeedbackFile(null);
                 }}
                 onFileView={() => {
-                  handleDownload(studentFeedbackData, studentFeedbackFile);
+                  if (studentFeedbackData) {
+                    setPreviewData(studentFeedbackData);
+                    setPreviewTitle("Student Feedback");
+                  } else {
+                    alert("No data to view");
+                  }
                 }}
               />
             </div>
@@ -289,6 +284,15 @@ function App() {
         )}
 
       </main>
+
+      {/* Data Preview Modal */}
+      {previewData && (
+        <DataPreviewModal
+          title={previewTitle}
+          data={previewData}
+          onClose={() => setPreviewData(null)}
+        />
+      )}
     </div>
   );
 }
